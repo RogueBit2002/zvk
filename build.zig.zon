@@ -1,0 +1,12 @@
+.{
+    .name = .zvk,
+    .version = "0.17.0-dev.329+21b7ceb5e",
+    .dependencies = .{
+        .vulkan_headers = .{
+            .url = "git+https://github.com/KhronosGroup/Vulkan-Headers#45834b722e29ca6968f3811ae930eae7bb73e9e8",
+            .hash = "N-V-__8AAA_gewLAqvkaEZqi4gTYHHr2t1zlcXTnm1S3GNin",
+        },
+    },
+    .paths = .{""},
+    .fingerprint = 0x5225234e9367e71,
+}
