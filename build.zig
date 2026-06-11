@@ -3,21 +3,7 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
- 
 
-    const xml_h = b.addTranslateC(.{
-        .root_source_file = b.dependency("xml.h", .{}).path("xml.h"),
-        .target = target,
-        .optimize = optimize
-    }).createModule();
-
-    _ = xml_h;
-    const zvk_module = b.addModule("zvk", .{
-        .root_source_file = b.path("src/zvk.zig"),
-        .target = target,
-        .optimize = optimize,
-        .link_libc = true,
-    });
 
     const playground_exe = b.addExecutable(.{
         .name = "zvk-playground",
@@ -28,8 +14,13 @@ pub fn build(b: *std.Build) void {
             .imports = &.{
                 .{
                     .name = "zvk",
-                    .module = zvk_module
-                },
+                    .module = b.createModule(.{
+                        .root_source_file = b.path("src/zvk_m.zig"),
+                        .target = target,
+                        .optimize = optimize,
+                        .link_libc = true
+                    })
+                }
             }
         })
     });
