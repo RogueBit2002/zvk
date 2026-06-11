@@ -164,12 +164,14 @@ pub const SampleCountFlags = Flags;
 pub const max_physical_device_name_size: u32 = 256;
 pub const uuid_size: u32 = 16;
 
+
 // ENUMS
 
 pub const StructureType = enum(i32) {
     application_info = 0,
     instance_create_info = 1,
-    physical_device_properties_2 = 1000059001
+    physical_device_features_2 = 1000059000,
+    physical_device_properties_2 = 1000059001,
 };
 
 pub const PhysicalDeviceType = enum(i32){
@@ -374,6 +376,7 @@ pub fn enumeratePhysicalDevices(vk: Vk, instance: Instance, p_physical_device_co
     return parseResult(result) catch |err| scopeError(err_set, err);
 }
 
+// out of spec
 pub fn getPhysicalDeviceProperties(vk: Vk, instance: Instance, physical_device: PhysicalDevice, p_properties: *PhysicalDeviceProperties) void {
     
     const state = @as(*State, @ptrCast(@alignCast(vk.ptr)));
@@ -383,6 +386,8 @@ pub fn getPhysicalDeviceProperties(vk: Vk, instance: Instance, physical_device: 
     std.debug.print("{*}\n", .{ func });
     func(physical_device, p_properties);
 }
+
+// out of spec
 pub fn getPhysicalDeviceProperties2(vk: Vk, instance: Instance, physical_device: PhysicalDevice, p_properties: *PhysicalDeviceProperties2) void {
     
     const state = @as(*State, @ptrCast(@alignCast(vk.ptr)));
