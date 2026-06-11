@@ -6,6 +6,10 @@
             .url = "git+https://github.com/KhronosGroup/Vulkan-Headers#45834b722e29ca6968f3811ae930eae7bb73e9e8",
             .hash = "N-V-__8AAA_gewLAqvkaEZqi4gTYHHr2t1zlcXTnm1S3GNin",
         },
+        .@"xml.h" = .{
+            .url = "git+https://github.com/mrvladus/xml.h#beda1e0702a5406cae75fecc4d07b8a3cc2a8337",
+            .hash = "N-V-__8AAAJyAABI-9w6uOTz36em6uzaSttvLeTCKuuiuL-O",
+        },
     },
     .paths = .{""},
     .fingerprint = 0x5225234e9367e71,

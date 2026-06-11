@@ -5,6 +5,13 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
  
 
+    const xml_h = b.addTranslateC(.{
+        .root_source_file = b.dependency("xml.h", .{}).path("xml.h"),
+        .target = target,
+        .optimize = optimize
+    }).createModule();
+
+    _ = xml_h;
     const zvk_module = b.addModule("zvk", .{
         .root_source_file = b.path("src/zvk.zig"),
         .target = target,
@@ -22,7 +29,7 @@ pub fn build(b: *std.Build) void {
                 .{
                     .name = "zvk",
                     .module = zvk_module
-                }
+                },
             }
         })
     });
