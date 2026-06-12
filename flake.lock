@@ -52,7 +52,6 @@
     "root": {
       "inputs": {
         "nixpkgs": "nixpkgs",
-        "vulkan-headers": "vulkan-headers",
         "zig2nix": "zig2nix"
       }
     },
@@ -68,22 +67,6 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
-        "type": "github"
-      }
-    },
-    "vulkan-headers": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1780618995,
-        "narHash": "sha256-T2DpR2l8j/WnkJGByyoVSLWLzvHKvKvq2tIiH1gJxOM=",
-        "owner": "KhronosGroup",
-        "repo": "Vulkan-Headers",
-        "rev": "45834b722e29ca6968f3811ae930eae7bb73e9e8",
-        "type": "github"
-      },
-      "original": {
-        "owner": "KhronosGroup",
-        "repo": "Vulkan-Headers",
         "type": "github"
       }
     },

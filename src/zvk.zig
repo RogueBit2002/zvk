@@ -1,4 +1,6 @@
 const std = @import("std");
+const util = @import("util.zig");
+const instance_dsp = @import("instance.zig");
 
 // META
 const Vk = @This();
@@ -10,7 +12,7 @@ const State = struct{
     getInstanceProcAddr: GetInstanceProcAddrFn,
 };
 
-ptr: *anyopaque, 
+_handle: *const State, 
 
 pub fn init(allocator: std.mem.Allocator, getInstanceProcAddr: GetInstanceProcAddrFn) !Vk {
 
@@ -18,15 +20,25 @@ pub fn init(allocator: std.mem.Allocator, getInstanceProcAddr: GetInstanceProcAd
     ptr.allocator = allocator;
     ptr.getInstanceProcAddr = getInstanceProcAddr;
 
-    return @This(){ .ptr = @as(*anyopaque, @ptrCast(ptr)) };
+    return @This(){ ._handle = ptr };
 }
 
 pub fn deinit(vk: Vk) void {
-    const ptr = @as(*State, @ptrCast(@alignCast(vk.ptr)));
-    ptr.allocator.destroy(ptr);
+    vk._handle.allocator.destroy(vk._handle);
 }
 
-
+fn sw(comptime T: type) type {
+    return switch(T) {
+        Instance => instance_dsp,
+        else => unreachable
+    };
+}
+pub fn dsp(vk: Vk, handle: anytype) sw(@TypeOf(handle)) {
+    return switch(@TypeOf(handle)) {
+        Instance => instance_dsp{ .vk = vk, .instance = handle },
+        else => unreachable
+    };
+}
 
 pub const Status = enum(i32){
     success = 0,
@@ -43,7 +55,6 @@ pub const Status = enum(i32){
     operation_not_deferred_khr = 1000268003,
     incomplete_shader_binary_ext = 1000482000,
     pipeline_binary_missing_khr = 1000483000,
-    _
 };
 
 pub const Error = error{
@@ -85,13 +96,9 @@ pub const Error = error{
     NotEnoughSpaceKHR,
 };
 
-fn parseResult(result: i32) Error!Status {
+pub fn parseResult(result: i32) Error!Status {
     if(result >= 0) {
-        const s: Status = @enumFromInt(result);
-        return switch(s) {
-            _ => unreachable,
-            else => s
-        };
+        return @as(Status, @enumFromInt(result));
     }
 
     return switch(result) {
@@ -135,15 +142,49 @@ fn parseResult(result: i32) Error!Status {
     };
 }
 
-fn scopeError(comptime subset: type, err: anyerror) subset {
-    const info = @typeInfo(subset).error_set.?;
-    inline for (info) |e| {
-        if(err == @field(anyerror, e.name))
-            return @field(anyerror, e.name);
-    }
-    unreachable;
-}
 
+
+pub fn errorToStatus(err: Error) Result {
+    return switch(err) {
+        .OutOfHostMemory=>-1,
+        .OutOfDeviceMemory=>-2,
+        .InitializationFailed=>-3,
+        .DeviceLost=>-4,
+        .MemoryMapFailed=>-5,
+        .LayerNotPresent=>-6,
+        .ExtensionNotPresent=>-7,
+        .FeatureNotPresent=>-8,
+        .IncompatibleDriver=>-9,
+        .TooManyObjects=>-10,
+        .FormatNotSupported=>-11,
+        .FragmentedPool=>-12,
+        .Unknown=>-13,
+        .ValidationFailed=>-1000011001,
+        .OutOfPoolMemory=>-1000069000,
+        .InvalidExternalHandle=>-1000072003,
+        .InvalidOpaqueCaptureAddress=>-1000257000,
+        .Fragmentation=>-1000161000,
+        .NotPermitted=>-1000174001,
+        .SurfaceLostKHR=>-1000000000,
+        .NativeWindowInUseKHR=>-1000000001,
+        .OutOfDateKHR=>-1000001004,
+        .IncompatibleDisplayKHR=>-1000003001,
+        .InvalidShaderNV=>-1000012000,
+        .ImageUsageNotSupportedKHR=>-1000023000,
+        .VideoPictureLayoutNotSupportedKHR=>-1000023001,
+        .VideoProfileOperationNotSupportedKHR=>-1000023002,
+        .VideoProfileFormatNotSupportedKHR=>-1000023003,
+        .VideoProfileCodecNotSupportedKHR=>-1000023004,
+        .VideoStdVersionNotSupportedKHR=>-1000023005,
+        .InvalidDrmFormatModifierPlaneLayoutExt=>-1000158000,
+        .PresentTimingQueueFullExt=>-1000208000,
+        .FullScreenExclusiveModeLostExt=>-1000255000,
+        .InvalidVideoStdParametersKHR=>-1000299000,
+        .CompressionExhaustedExt=>-1000338000,
+        .NotEnoughSpaceKHR=>-1000483000,
+        else => unreachable
+    };
+}
 
 // HANDLES
 
@@ -153,6 +194,7 @@ pub const Device = *opaque {};
 
 // DEFINES
 
+pub const Result = i32;
 pub const SampleMask = u32;
 pub const Bool32 = u32;
 pub const Flags = u32;
@@ -328,8 +370,8 @@ pub const PhysicalDeviceProperties = extern struct {
     vendor_id: u32,
     device_id: u32,
     device_type: PhysicalDeviceType,
-    device_name: [max_physical_device_name_size]u8,
-    pipline_cache_uuid:  [uuid_size]u8,
+    device_name: [max_physical_device_name_size:0]u8,
+    pipline_cache_uuid:  [uuid_size:0]u8,
     limits: PhysicalDeviceLimits,
     sparse_properties: PhysicalDeviceSparseProperties
     
@@ -344,56 +386,10 @@ pub const PhysicalDeviceProperties2 = extern struct {
 pub fn createInstance(vk: Vk, p_create_info: *const InstanceCreateInfo, p_allocator: ?*const anyopaque, p_instance: *Instance) error{ ExtensionNotPresent, IncompatibleDriver, InitializationFailed, LayerNotPresent, OutOfDeviceMemory, OutOfHostMemory, Unknown, ValidationFailed}!Status { 
     const err_set = comptime @typeInfo(@typeInfo(@TypeOf(createInstance)).@"fn".return_type.?).error_union.error_set;
     
-    const state = @as(*State, @ptrCast(@alignCast(vk.ptr)));
-
-    const raw = state.getInstanceProcAddr(null, "vkCreateInstance") orelse unreachable;
+    const raw = vk._handle.getInstanceProcAddr(null, "vkCreateInstance") orelse unreachable;
     const func = @as(*const fn(*const InstanceCreateInfo, ?*const anyopaque, *Instance) callconv(.c) i32, @ptrCast(raw));
 
     const result = func(p_create_info, p_allocator, p_instance);
     
-    return parseResult(result) catch |err| scopeError(err_set, err);
-}
-
-pub fn destroyInstance(vk: Vk, instance: ?Instance, p_allocator: ?*const anyopaque) void {
-    const ptr = @as(*State, @ptrCast(@alignCast(vk.ptr)));
-
-    const raw = ptr.getInstanceProcAddr(instance, "vkDestroyInstance") orelse unreachable;
-    const func = @as(*const fn(?Instance, ?*const anyopaque) callconv(.c) void, @ptrCast(raw));
-
-    func(instance, p_allocator);
-}
-          
-pub fn enumeratePhysicalDevices(vk: Vk, instance: Instance, p_physical_device_count: ?*u32, p_physical_devices: ?[*]PhysicalDevice) error{ OutOfHostMemory, OutOfDeviceMemory, InitializationFailed, Unknown, ValidationFailed }!Status {
-    const err_set = comptime @typeInfo(@typeInfo(@TypeOf(enumeratePhysicalDevices)).@"fn".return_type.?).error_union.error_set;
-
-    const state = @as(*State, @ptrCast(@alignCast(vk.ptr)));
-
-    const raw = state.getInstanceProcAddr(instance, "vkEnumeratePhysicalDevices") orelse unreachable;
-    const func = @as(*const fn(Instance, ?*u32, ?[*]PhysicalDevice) callconv(.c) i32, @ptrCast(raw));
-    
-    const result = func(instance, p_physical_device_count, p_physical_devices);
-
-    return parseResult(result) catch |err| scopeError(err_set, err);
-}
-
-// out of spec
-pub fn getPhysicalDeviceProperties(vk: Vk, instance: Instance, physical_device: PhysicalDevice, p_properties: *PhysicalDeviceProperties) void {
-    
-    const state = @as(*State, @ptrCast(@alignCast(vk.ptr)));
-    const raw = state.getInstanceProcAddr(instance, "vkGetPhysicalDeviceProperties") orelse unreachable;
-    const func = @as(*const fn(PhysicalDevice, *PhysicalDeviceProperties) callconv(.c) void, @ptrCast(raw));
-
-    std.debug.print("{*}\n", .{ func });
-    func(physical_device, p_properties);
-}
-
-// out of spec
-pub fn getPhysicalDeviceProperties2(vk: Vk, instance: Instance, physical_device: PhysicalDevice, p_properties: *PhysicalDeviceProperties2) void {
-    
-    const state = @as(*State, @ptrCast(@alignCast(vk.ptr)));
-    const raw = state.getInstanceProcAddr(instance, "vkGetPhysicalDeviceProperties2") orelse unreachable;
-    const func = @as(*const fn(PhysicalDevice, *PhysicalDeviceProperties2) callconv(.c) void, @ptrCast(raw));
-
-    std.debug.print("{*}\n", .{ func });
-    func(physical_device, p_properties);
+    return parseResult(result) catch |err| util.scopeError(err_set, err);
 }

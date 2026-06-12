@@ -15,7 +15,7 @@ pub fn build(b: *std.Build) void {
                 .{
                     .name = "zvk",
                     .module = b.createModule(.{
-                        .root_source_file = b.path("src/zvk_m.zig"),
+                        .root_source_file = b.path("src/zvk.zig"),
                         .target = target,
                         .optimize = optimize,
                         .link_libc = true

@@ -41,27 +41,26 @@ pub fn main() !void {
 
     var instance: Vk.Instance = undefined;
     _ = try vk.createInstance(&create_info, null, &instance);
-    defer vk.destroyInstance(instance, null);
+    const vki = vk.dsp(instance);
+
+    defer vki.destroyInstance(instance, null);
 
     var physical_device_count: u32 = undefined;
-    _ = try vk.enumeratePhysicalDevices(instance, &physical_device_count, null);
+    _ = try vki.enumeratePhysicalDevices(instance, &physical_device_count, null);
 
     const physical_devices = try allocator.alloc(Vk.PhysicalDevice, physical_device_count);
     defer allocator.free(physical_devices);
 
-    _ = try vk.enumeratePhysicalDevices(instance, &physical_device_count, physical_devices.ptr);
+    _ = try vki.enumeratePhysicalDevices(instance, &physical_device_count, physical_devices.ptr);
 
     for(physical_devices) |physical_device| {
         var properties: Vk.PhysicalDeviceProperties2 = .{ .properties = undefined };
 
-        vk.getPhysicalDeviceProperties2(instance, physical_device, &properties);
-
-        std.debug.print("{}\n", .{ properties });
+        vki.getPhysicalDeviceProperties2(physical_device, &properties);
+        // vk.dsp(instance).getPhysicalDeviceProperties
+        std.debug.print("{s}\n", .{ properties.properties.device_name });
     }
-
 }
-
-
 
 fn makeApiVersion(variant: u32, major: u32, minor: u32, patch: u32) u32 {
     return (variant << 29) | (major << 22) | (minor << 12) | patch;
